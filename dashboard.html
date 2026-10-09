@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MAS | NIDO WORKZ</title>
+  <link rel="icon" href="/static/dist/img/logo.png">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="/static/plugins/fontawesome-free/css/all.min.css">
+  <!-- Theme style -->
+  <link rel="stylesheet" href="/static/dist/css/nidoworkz.min.css">
+  <style>
+    input, select { user-select: auto !important; -webkit-user-select: auto !important; }
+    .status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #adb5bd; margin-right: 6px; }
+    .status-dot.ok { background: #28a745; } .status-dot.err { background: #dc3545; }
+    .report-wrap { max-height: 560px; overflow: auto; }
+    .report { font-variant-numeric: tabular-nums; min-width: 760px; margin-bottom: 0; }
+    .report th, .report td { text-align: right; white-space: nowrap; }
+    .report th:nth-child(-n+3), .report td:nth-child(-n+3) { text-align: left; }
+    .report thead th { position: sticky; top: 0; z-index: 1; background: #fff; white-space: normal; vertical-align: bottom; font-size: .85rem; }
+    .report tfoot td { position: sticky; bottom: 0; background: #fff; font-weight: 700; border-top: 2px solid #dee2e6; }
+    .report tr.newshift td { border-top: 2px solid #adb5bd; }
+    .info-box .info-box-number { font-size: 1.35rem; }
+    .info-box .info-box-sub { font-size: .8rem; color: #6c757d; }
+    [hidden] { display: none !important; }
+    body.loading .content-wrapper .content { opacity: .6; transition: opacity .2s; }
+  </style>
+</head>
+<body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">
+<div class="wrapper">
+
+  <!-- Navbar -->
+  <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+    <ul class="navbar-nav">
+      <li class="nav-item"><a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a></li>
+      <li class="nav-item d-none d-sm-inline-block"><a href="/" class="nav-link">Home</a></li>
+    </ul>
+    <ul class="navbar-nav ml-auto align-items-center">
+      <li class="nav-item d-none d-md-flex align-items-center mr-3 small text-muted">
+        <span class="status-dot" id="dot"></span><span id="statusText">Connecting…</span>
+      </li>
+      <li class="nav-item mr-3">
+        <div class="custom-control custom-switch">
+          <input type="checkbox" class="custom-control-input" id="auto" checked>
+          <label class="custom-control-label small" for="auto">Auto-refresh</label>
+        </div>
+      </li>
+      <li class="nav-item">
+        <button class="btn btn-sm btn-outline-primary" id="refresh"><i class="fas fa-sync-alt mr-1"></i>Refresh</button>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-widget="fullscreen" href="#" role="button"><i class="fas fa-expand-arrows-alt"></i></a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Main Sidebar -->
+  <aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <a href="/" class="brand-link">
+      <img src="/static/dist/img/logo.png" alt="NIDO" class="brand-image img-circle elevation-3" style="opacity:.9">
+      <span class="brand-text font-weight-light">NIDO WORKZ</span>
+    </a>
+    <div class="sidebar">
+      <nav class="mt-2">
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+          <li class="nav-item">
+            <a href="/" class="nav-link active"><i class="nav-icon fas fa-tachometer-alt"></i><p>MAS Dashboard</p></a>
+          </li>
+          <li class="nav-header">REPORTS</li>
+          <li class="nav-item">
+            <a href="#shiftCard" class="nav-link"><i class="nav-icon fas fa-business-time"></i><p>Shift-wise report</p></a>
+          </li>
+          <li class="nav-item">
+            <a href="#hourCard" class="nav-link"><i class="nav-icon fas fa-clock"></i><p>Hour-wise report</p></a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </aside>
+
+  <!-- Content Wrapper -->
+  <div class="content-wrapper">
+    <div class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1 class="m-0">MAS</h1>
+            <small class="text-muted">Hour-wise and shift-wise induction against target</small>
+          </div>
+          <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+              <li class="breadcrumb-item"><a href="/">Home</a></li>
+              <li class="breadcrumb-item active">MAS</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="content">
+      <div class="container-fluid">
+
+        <div id="err" class="alert alert-danger d-flex justify-content-between align-items-center flex-wrap" hidden>
+          <span><i class="icon fas fa-ban"></i><span id="errText"></span></span>
+          <button class="btn btn-sm btn-light" id="retry">Try again</button>
+        </div>
+
+        <!-- Filters -->
+        <div class="card card-primary card-outline">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-filter mr-1"></i>Filters</h3>
+            <div class="card-tools">
+              <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="form-row align-items-end">
+              <div class="form-group col-6 col-md-4 col-xl-2"><label for="site">Site</label><select id="site" class="form-control"></select></div>
+              <div class="form-group col-6 col-md-4 col-xl-2"><label for="machine">Machine</label><select id="machine" class="form-control"><option value="All">All machines</option></select></div>
+              <div class="form-group col-6 col-md-4 col-xl-2"><label for="shift">Shift</label><select id="shift" class="form-control"><option value="All">All shifts</option></select></div>
+              <div class="form-group col-6 col-md-4 col-xl-2"><label for="start">Start date</label><input type="date" id="start" class="form-control"></div>
+              <div class="form-group col-6 col-md-4 col-xl-2"><label for="end">End date</label><input type="date" id="end" class="form-control"></div>
+              <div class="form-group col-6 col-md-4 col-xl-2"><label for="target">Target / machine / hour</label><input type="number" id="target" class="form-control border-primary" min="0" step="1"></div>
+              <div class="form-group col-12">
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-default" data-days="1">Last day</button>
+                  <button class="btn btn-default" data-days="7">7 days</button>
+                  <button class="btn btn-default" data-days="0">All</button>
+                </div>
+              </div>
+            </div>
+            <p class="small text-muted mb-0">Shift target = target × machines that ran × shift hours. Hour target = target × machines that ran in that shift.
+              Night shift (21:00 - 05:00) is reported under the date it starts. Shifts with no scans show zero.
+              Target is saved in this browser.</p>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="row" id="kpis"></div>
+
+        <!-- Shift-wise -->
+        <div class="card card-primary card-outline" id="shiftCard">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-business-time mr-1"></i>Shift-wise report</h3>
+            <div class="card-tools">
+              <button class="btn btn-primary btn-sm" data-csv="shift"><i class="fas fa-download mr-1"></i>Download CSV</button>
+            </div>
+          </div>
+          <div class="card-body p-0 report-wrap">
+            <table class="table table-sm table-striped table-hover report">
+              <thead><tr><th>Date</th><th>Shift time</th><th>Machines</th><th>Total target</th><th>Total induction</th><th>Total reject</th>
+                <th>Induction balance<br>(total induction − calibration)</th><th>Achieve target<br>(targeted − inducted)</th>
+                <th>Rejected by client</th><th>Rejected by machine</th></tr></thead>
+              <tbody id="shiftBody"></tbody><tfoot id="shiftFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- Hour-wise -->
+        <div class="card card-primary card-outline" id="hourCard">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-clock mr-1"></i>Hour-wise report</h3>
+            <div class="card-tools">
+              <button class="btn btn-primary btn-sm" data-csv="hour"><i class="fas fa-download mr-1"></i>Download CSV</button>
+            </div>
+          </div>
+          <div class="card-body p-0 report-wrap">
+            <table class="table table-sm table-striped table-hover report">
+              <thead><tr><th>Date</th><th>Hour</th><th>Shift time</th><th>Total target</th><th>Total induction</th>
+                <th>Total induction − calibration</th><th>Targeted − inducted</th></tr></thead>
+              <tbody id="hourBody"></tbody><tfoot id="hourFoot"></tfoot>
+            </table>
+          </div>
+          <div class="card-footer small text-muted">
+            <span class="text-danger font-weight-bold">Red</span> = below target (positive shortfall).
+            <span class="text-success font-weight-bold">Green</span> = target met (zero or negative).
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </div>
+
+  <footer class="main-footer small">
+    <strong>NIDO Machineries Pvt. Ltd.</strong> &middot; MAS
+  </footer>
+</div>
+
+<!-- jQuery -->
+<script src="/static/plugins/jquery/jquery.min.js"></script>
+<!-- Bootstrap 4 -->
+<script src="/static/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+<!-- nidoworkz App -->
+<script src="/static/dist/js/nidoworkz.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const el = {site:$('site'), machine:$('machine'), shift:$('shift'), start:$('start'), end:$('end'), target:$('target')};
+let ctrl, timer, debounce, minDate, maxDate, last;
+const fmt = n => Number(n || 0).toLocaleString('en-IN');
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dmy = iso => iso.split('-').reverse().join('-');
+const gap = n => `<td class="font-weight-bold ${n > 0 ? 'text-danger' : 'text-success'}">${fmt(n)}</td>`;
+const sum = (rows, k) => rows.reduce((a, r) => a + r[k], 0);
+
+const COLS = {
+  shift: [['Date', r => dmy(r.date)], ['Shift time', r => r.shift], ['Machines', r => r.machines], ['Total target', r => r.target],
+    ['Total induction', r => r.induction], ['Total reject', r => r.rejected], ['Induction balance (total induction - calibration)', r => r.balance],
+    ['Achieve target (targeted - inducted)', r => r.shortfall], ['Rejected by client', r => r.rejected_client], ['Rejected by machine', r => r.rejected_machine]],
+  hour: [['Date', r => dmy(r.date)], ['Hour', r => r.hour], ['Shift time', r => r.shift], ['Total target', r => r.target],
+    ['Total induction', r => r.induction], ['Total induction - calibration', r => r.balance], ['Targeted - inducted', r => r.shortfall]],
+};
+
+function params() {
+  const p = new URLSearchParams({site: el.site.value, machine: el.machine.value, shift: el.shift.value,
+    target: el.target.value || 0});
+  if (el.start.value) p.set('start_date', el.start.value);
+  if (el.end.value) p.set('end_date', el.end.value);
+  return p;
+}
+async function api(path, p, signal) {
+  const r = await fetch(`${path}?${p}`, {signal});
+  if (!r.ok) { let d = ''; try { d = (await r.json()).detail; } catch {} throw new Error(Array.isArray(d) ? 'Invalid input: ' + d.map(x => x.loc.at(-1)).join(', ') : d || `Server error (${r.status})`); }
+  return r.json();
+}
+function showError(msg) {
+  $('dot').className = 'status-dot err'; $('statusText').textContent = 'Connection problem';
+  $('errText').textContent = msg === 'Failed to fetch' ? 'Cannot reach the server. Check that it is running.' : msg;
+  $('err').hidden = false;
+}
+
+async function loadFilters() {
+  const f = await api('/api/filters', new URLSearchParams(el.site.value ? {site: el.site.value} : {}));
+  if (!el.site.options.length) el.site.innerHTML = f.sites.map(s => `<option>${esc(s)}</option>`).join('');
+  el.site.value = f.site;
+  const opt = (v, t) => `<option value="${esc(v)}">${esc(t)}</option>`;
+  el.machine.innerHTML = opt('All', 'All machines') + f.machines.map(m => opt(m, m)).join('');
+  el.shift.innerHTML = opt('All', 'All shifts') + f.shifts.map(s => opt(s.name, `${s.name} (${s.label})`)).join('') + opt('Outside shift', 'Outside shift');
+  if (el.target.value === '') el.target.value = localStorage.getItem('billing.target') ?? f.default_target;
+  minDate = f.min_date; maxDate = f.max_date;
+  el.start.value = minDate || ''; el.end.value = maxDate || '';
+  el.start.min = el.end.min = minDate || ''; el.start.max = el.end.max = maxDate || '';
+}
+
+function setRange(days) {
+  if (!maxDate) return;
+  el.end.value = maxDate;
+  if (!days) el.start.value = minDate;
+  else {
+    const d = new Date(maxDate + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - days + 1);
+    const s = d.toISOString().slice(0, 10);
+    el.start.value = s < minDate ? minDate : s;
+  }
+  load();
+}
+
+function render(b) {
+  last = b;
+  const t = b.totals;
+  // [label, value, sub-text, icon, AdminLTE colour]
+  $('kpis').innerHTML = [['Total target', fmt(t.target), '', 'fa-bullseye', 'bg-info'],
+    ['Total induction', fmt(t.induction), '', 'fa-box', 'bg-primary'],
+    ['Induction balance', fmt(t.balance), 'after calibration', 'fa-balance-scale', 'bg-secondary'],
+    ['Achievement', t.achievement + '%', 'balance ÷ target', 'fa-chart-line', t.achievement >= 100 ? 'bg-success' : 'bg-warning'],
+    ['Short of target', fmt(Math.max(t.shortfall, 0)), t.shortfall < 0 ? `exceeded by ${fmt(-t.shortfall)}` : 'targeted − inducted',
+      'fa-arrow-down', t.shortfall > 0 ? 'bg-danger' : 'bg-success'],
+    ['Total reject', fmt(t.rejected), t.induction ? Math.round(t.rejected * 100 / t.induction) + '% of induction' : '', 'fa-ban', 'bg-danger']]
+    .map(c => `<div class="col-12 col-sm-6 col-lg-4 col-xl-2"><div class="info-box">
+      <span class="info-box-icon ${c[4]} elevation-1"><i class="fas ${c[3]}"></i></span>
+      <div class="info-box-content"><span class="info-box-text">${c[0]}</span><span class="info-box-number">${c[1]}</span>
+      <span class="info-box-sub">${c[2]}</span></div></div></div>`).join('');
+
+  const empty = n => `<tr><td colspan="${n}" class="text-center text-muted">No scans for these filters.</td></tr>`;
+  $('shiftBody').innerHTML = b.shift.length ? b.shift.map(r => `<tr><td>${dmy(r.date)}</td><td>${esc(r.shift)}</td><td>${r.machines}</td>
+    <td title="${fmt(b.config.target)} × ${r.machines} machine(s) × ${r.hours} h">${fmt(r.target)}</td><td>${fmt(r.induction)}</td><td>${fmt(r.rejected)}</td>
+    <td>${fmt(r.balance)}</td>${gap(r.shortfall)}<td>${fmt(r.rejected_client)}</td><td>${fmt(r.rejected_machine)}</td></tr>`).join('') : empty(10);
+  $('shiftFoot').innerHTML = b.shift.length ? `<tr><td>Total</td><td></td><td></td><td>${fmt(t.target)}</td><td>${fmt(t.induction)}</td><td>${fmt(t.rejected)}</td>
+    <td>${fmt(t.balance)}</td>${gap(t.shortfall)}<td>${fmt(t.rejected_client)}</td><td>${fmt(t.rejected_machine)}</td></tr>` : '';
+
+  let prev = '';
+  $('hourBody').innerHTML = b.hour.length ? b.hour.map(r => {
+    const key = r.date + r.shift, cls = prev && key !== prev ? ' class="newshift"' : ''; prev = key;
+    return `<tr${cls}><td>${dmy(r.date)}</td><td>${r.hour}</td><td>${esc(r.shift)}</td>
+      <td title="${fmt(b.config.target)} × ${r.machines} machine(s)">${fmt(r.target)}</td><td>${fmt(r.induction)}</td><td>${fmt(r.balance)}</td>${gap(r.shortfall)}</tr>`;
+  }).join('') : empty(7);
+  $('hourFoot').innerHTML = b.hour.length ? `<tr><td>Total</td><td></td><td></td><td>${fmt(sum(b.hour, 'target'))}</td><td>${fmt(sum(b.hour, 'induction'))}</td>
+    <td>${fmt(sum(b.hour, 'balance'))}</td>${gap(sum(b.hour, 'shortfall'))}</tr>` : '';
+}
+
+async function load() {
+  ctrl?.abort();
+  const me = ctrl = new AbortController();
+  document.body.classList.add('loading');
+  try {
+    render(await api('/api/billing', params(), me.signal));
+    $('err').hidden = true; $('dot').className = 'status-dot ok';
+    $('statusText').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN');
+  } catch (e) {
+    if (e.name !== 'AbortError') showError(e.message);
+  } finally {
+    if (ctrl === me) document.body.classList.remove('loading');
+  }
+}
+
+function downloadCsv(kind) {
+  if (!last) return;
+  const cell = v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  const cols = COLS[kind];
+  const lines = [cols.map(c => cell(c[0])).join(','), ...last[kind].map(r => cols.map(c => cell(c[1](r))).join(','))];
+  const blob = new Blob(['﻿' + lines.join('\r\n')], {type: 'text/csv'});  // BOM so Excel reads UTF-8
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${el.site.value.toLowerCase()}_${kind}_wise_${el.start.value}_to_${el.end.value}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function schedule() {
+  clearInterval(timer);
+  if ($('auto').checked) timer = setInterval(() => { if (!document.hidden) load(); }, 60000);
+}
+
+async function init() {
+  try { await loadFilters(); } catch (e) { showError(e.message); return; }
+  load();
+}
+
+el.site.onchange = init;
+[el.machine, el.shift, el.start, el.end].forEach(x => x.onchange = load);
+el.target.oninput = () => {
+  if (el.target.value === '' || +el.target.value < 0) return;
+  localStorage.setItem('billing.target', el.target.value);
+  clearTimeout(debounce); debounce = setTimeout(load, 400);
+};
+document.querySelectorAll('[data-days]').forEach(b => b.onclick = () => setRange(+b.dataset.days));
+document.querySelectorAll('[data-csv]').forEach(b => b.onclick = () => downloadCsv(b.dataset.csv));
+$('refresh').onclick = $('retry').onclick = load;
+$('auto').onchange = schedule;
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+
+init();
+schedule();
+</script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+/* Additions on top of the NIDO WORKZ (AdminLTE 3) theme. Colours come from the theme classes
+   (bg-*, text-danger / text-success, card-primary); only layout is adjusted here. */
+
+/* The theme disables text selection everywhere; keep form fields editable. */
+input, select { user-select: auto !important; -webkit-user-select: auto !important; }
+
+/* The theme locks <body> to the screen height (no page scroll) and fixes the footer, so the
+   content area must scroll itself, leaving room for the fixed navbar and footer. */
+.layout-navbar-fixed .wrapper .content-wrapper {
+  height: calc(100vh - (3.5rem + 1px));
+  height: calc(100dvh - (3.5rem + 1px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4.5rem;
+}
+/* Keep the content area's top margin (the room left for the fixed navbar) inside .wrapper. Otherwise the
+   margin collapses through to <body>, the page grows a navbar-height taller than the screen, and scrolling
+   that extra bit slides the page title and first card under the navbar. */
+.layout-navbar-fixed .wrapper { display: flow-root; }
+
+/* The theme's fixed footer is 100% wide plus the sidebar margin, so it ran off the right edge. */
+.main-footer { width: auto; right: 0; }
+
+.status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #adb5bd; margin-right: 6px; }
+.status-dot.ok { background: #28a745; }
+.status-dot.error { background: #dc3545; }
+
+.page-actions { gap: .5rem 1rem; }
+
+.is-loading { opacity: .6; transition: opacity .2s; }
+
+/* ---- KPI tiles: 1 / 2 / 3 / all in one row as the screen widens */
+.kpi-grid { display: grid; grid-template-columns: 1fr; gap: 0 1rem; }
+@media (min-width: 576px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 992px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1400px) { .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); } }
+.info-box .info-box-text { white-space: normal; line-height: 1.3; }
+.info-box .info-box-number { font-size: 1.35rem; }
+.info-box .info-box-sub { font-size: .8rem; line-height: 1.3; color: #6c757d; }
+
+/* ---- Every table: one look. Headers and cells centred, rows vertically centred, numbers in equal-width digits
+   so centred columns still line up; the browser shares spare width between columns in proportion to their content. */
+.content .table { width: 100%; margin-bottom: 0; color: #212529; font-variant-numeric: tabular-nums; }
+.content .table th, .content .table td { text-align: center; vertical-align: middle; padding: .6rem .85rem; border-color: #e9ecef; }
+.content .table thead th { background: #f4f6f9; color: #495057; font-size: .8rem; font-weight: 600; letter-spacing: .01em;
+                           line-height: 1.3; border-top: 0; border-bottom: 1px solid #dee2e6; min-width: 72px; }
+.content .table.table-striped tbody tr:nth-of-type(odd) { background-color: #fafbfc; }
+.content .table.table-hover tbody tr:hover { background-color: #f1f5fb; }
+/* controls inside cells sit in the middle of the cell too */
+.content .table td .form-control { margin-left: auto; margin-right: auto; }
+.content .table td select.form-control { text-align-last: center; }
+.content .table td input.form-control { text-align: center; }
+.content .table td .custom-control { display: inline-block; min-height: 1.25rem; }
+
+/* ---- Report tables: scroll inside the card, header / footer / first column stay visible */
+.report-wrap { max-height: min(560px, 70vh); overflow: auto; -webkit-overflow-scrolling: touch; }
+.report th, .report td { white-space: nowrap; }
+.report thead th { position: sticky; top: 0; z-index: 2; white-space: normal; }
+.report tfoot td { position: sticky; bottom: 0; z-index: 2; background: #f4f6f9; font-weight: 700; border-top: 2px solid #dee2e6; }
+.report tr.newshift td { border-top: 2px solid #adb5bd; }
+
+.report th:first-child, .report td:first-child { position: sticky; left: 0; z-index: 1; background: #fff; }
+.report thead th:first-child { background: #f4f6f9; }
+.report.table-striped tbody tr:nth-of-type(odd) td:first-child { background: #fafbfc; }
+.report.table-hover tbody tr:hover td:first-child { background: #f1f5fb; }
+.report thead th:first-child, .report tfoot td:first-child { z-index: 3; }
+.report tfoot td:first-child { background: #f4f6f9; }
+
+/* ---- Machine configuration: site rows with their machines nested below */
+.machine-tree .site-row td { background: #f4f6f9; }
+.machine-tree td.machine-name { word-break: break-all; }
+.machine-tree input, .machine-tree select { max-width: 220px; }
+
+/* Phones: one block per machine (name, then its target) instead of table columns. */
+@media (max-width: 575.98px) {
+  .machine-tree thead { display: none; }
+  .machine-tree tr { display: block; padding: .5rem 1rem; border-top: 1px solid #dee2e6; }
+  .machine-tree .site-row { background: #f4f6f9; }
+  .machine-tree td { display: block; border: 0; padding: .2rem 0 !important; }
+  .machine-tree td[data-label]::before { content: attr(data-label); display: block; font-size: .8rem; color: #6c757d; }
+  .machine-tree input, .machine-tree select { max-width: none; }
+}
+
+/* ---- Attendance sheet: machine buttons wrap inside their cell */
+.attendance-sheet td.machines { min-width: 220px; white-space: normal; }
+
+/* ---- Rejection codes: the reasons column wraps */
+.rejection-codes td.reasons { white-space: normal; min-width: 280px; max-width: 520px; }
+.rejection-codes select { min-width: 100px; max-width: 140px; }
+
+/* ---- Alarm analysis: key-finding cards, 1 / 2 / 4 per row as the screen widens */
+.finding-grid { display: grid; grid-template-columns: 1fr; gap: .75rem; margin-bottom: 1rem; }
+@media (min-width: 576px) { .finding-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1200px) { .finding-grid { grid-template-columns: repeat(4, 1fr); } }
+.finding-card { background: #fff; border-left: 4px solid; border-radius: .25rem; padding: .65rem .9rem;
+                box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2); min-width: 0; }
+.finding-title { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.finding-value { font-size: 1.15rem; font-weight: 700; line-height: 1.3; margin: .15rem 0;
+                 overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.finding-detail { font-size: .85rem; color: #6c757d; }
+
+/* ---- Alarm analysis: stop time per day chart */
+.stop-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .75rem;
+             padding: 1rem 1.25rem .25rem; }
+.stop-summary { display: flex; flex-direction: column; }
+.stop-total { font-size: 2rem; font-weight: 600; line-height: 1.1; color: #0b0b0b; letter-spacing: -.01em; }
+.stop-sub { font-size: .85rem; color: #52514e; margin-top: .2rem; }
+.stop-switch { display: inline-flex; background: #f1f0ec; border-radius: 999px; padding: 3px; }
+.stop-switch button { border: 0; background: transparent; color: #52514e; font-size: .8rem; font-weight: 500;
+                      padding: .3rem .85rem; border-radius: 999px; transition: background .15s, color .15s, box-shadow .15s; }
+.stop-switch button:hover { color: #0b0b0b; }
+.stop-switch button.active { background: #fff; color: #0b0b0b; box-shadow: 0 1px 3px rgba(11,11,11,.15); }
+.stop-switch button:focus-visible { outline: 2px solid #2a78d6; outline-offset: 1px; }
+.stop-legend { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; margin: .5rem 0 0; padding: 0 1.25rem; }
+.stop-legend li { display: inline-flex; align-items: center; gap: .45rem; padding: .3rem .75rem; border-radius: 999px;
+                  background: #f7f7f5; box-shadow: inset 0 0 0 1px rgba(11,11,11,.06); font-size: .82rem; }
+.stop-legend-name { color: #52514e; }
+.stop-legend-value { color: #0b0b0b; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stop-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.stop-chart-plot { position: relative; padding: .5rem .25rem .75rem; }
+.stop-chart-plot svg { display: block; overflow: visible; }
+.stop-hit:focus { outline: none; }
+.stop-hit:focus-visible { outline: 2px solid #2a78d6; outline-offset: -2px; }
+/* hovering a day dims the others, so the day in focus stands out */
+.stop-day { transition: opacity .15s; }
+.stop-chart-plot.is-hovering .stop-day:not(.is-active) { opacity: .35; }
+.stop-bar { transform-box: fill-box; transform-origin: bottom; animation: stop-grow .5s cubic-bezier(.2, .7, .3, 1) both; }
+@keyframes stop-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .stop-bar { animation: none; } .stop-day { transition: none; } }
+.stop-tip { position: absolute; transform: translateX(-50%); pointer-events: none; z-index: 5; background: #fff;
+            border-radius: .6rem; padding: .55rem .75rem; font-size: .8rem; white-space: nowrap;
+            box-shadow: 0 0 0 1px rgba(11,11,11,.06), 0 8px 24px rgba(11,11,11,.14); }
+.stop-tip-date { color: #52514e; margin-bottom: .3rem; font-weight: 500; }
+.stop-tip-row { display: flex; align-items: center; gap: .45rem; line-height: 1.6; }
+.stop-tip-row strong { color: #0b0b0b; font-variant-numeric: tabular-nums; min-width: 4.2em; }
+.stop-tip-key { width: 12px; height: 3px; border-radius: 2px; }
+.stop-tip-name { color: #52514e; }
+.stop-tip-total { border-top: 1px solid #eeede8; margin-top: .25rem; padding-top: .25rem; padding-left: calc(12px + .45rem); }
+
+/* ---- Alarm configuration: long alarm names wrap */
+.alarm-config td.name { white-space: normal; min-width: 240px; }
+.alarm-config select { min-width: 90px; max-width: 120px; }
+
+/* ---- Abnormalities: tables stacked full width; controls above a table wrap on narrow screens */
+.abn-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .5rem 1rem; }
+.abn-toolbar input[type="search"] { flex: 1 1 200px; max-width: 320px; }
+.abn-toolbar .abn-number { width: 80px; }
+.abn-toolbar-group { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.abn-toolbar .abn-picker { flex: 0 1 300px; flex-wrap: nowrap; }
+.abn-toolbar .abn-picker label { flex: 0 0 2.6rem; }
+.abn-toolbar .abn-view { flex: 1 1 auto; min-width: 0; }
+
+@media (max-width: 575.98px) {
+  /* card title on its own line, CSV button below it, instead of overlapping */
+  .abnormalities .card-header { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem; }
+  .abnormalities .card-header::after { display: none; }
+  .abnormalities .card-header .card-title { float: none; flex: 1 1 100%; }
+  .abnormalities .card-header .card-tools { float: none; margin: 0 0 0 auto; }
+  .abn-toolbar input[type="search"], .abn-toolbar .abn-picker { flex-basis: 100%; max-width: none; }
+}
+
+@media (max-width: 767.98px) {
+  .content .table { font-size: .85rem; }
+  .content .table th, .content .table td { padding: .4rem .5rem; }
+  .content .table thead th { font-size: .75rem; min-width: 60px; }
+  .card-header .card-tools .btn { padding: .2rem .5rem; }
+  .content-header h1 { font-size: 1.5rem; }
+}
