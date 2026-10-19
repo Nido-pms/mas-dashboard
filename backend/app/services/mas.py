@@ -7,6 +7,7 @@ from pymongo.collection import Collection
 
 from app.core.config import SITES
 from app.core.utils import clean
+from app.domain.schedule import ALWAYS, ShiftSchedule
 from app.domain.shifts import (OUTSIDE, ShiftCalendar, display_name, hour_label, shift_hours, shift_label,
                                sort_hour)
 from app.repositories import scans
@@ -42,15 +43,20 @@ def filter_options(site: str, coll: Collection, calendar: ShiftCalendar) -> Filt
 
 def billing_report(counts: Iterable[dict], *, start: date | None, end: date | None, shift: str, calendar: ShiftCalendar,
                    targets: dict[str, int], default_target: int, calibration: int,
-                   target_machines: Iterable[str], total_machines: int) -> BillingReport:
+                   target_machines: Iterable[str], total_machines: int,
+                   schedule: ShiftSchedule = ALWAYS) -> BillingReport:
     """Build hour-wise and shift-wise billing tables from hourly scan counts.
 
     Machine target   = its own target per hour, or `default_target` when it has none
-    Target per hour  = sum of the targets of `target_machines`, whether they ran or not
+    Target per hour  = sum of the targets of the `target_machines` active in that shift (Shift activation page),
+                       whether they ran or not
     Target per shift = target per hour x shift hours
-    Every shift of every date in the range is listed; shifts without scans show zeros.
+    Every active shift of every date in the range is listed; shifts without scans show zeros. A shift switched off
+    for every machine is left out, unless parcels were scanned in it: then it shows with target 0, so that its
+    parcels still add up in the totals.
     Calibration parcels are deducted once per shift (in its first hour on the hourly table).
     """
+    target_machines = list(target_machines)
     by_name = calendar.by_name
     zero = lambda: dict.fromkeys(COUNTS, 0)
     hours = defaultdict(zero)        # (shift date, shift name, hour) -> counts
@@ -83,15 +89,26 @@ def billing_report(counts: Iterable[dict], *, start: date | None, end: date | No
                     for h in shift_hours(s):
                         hours[(sd, s["name"], h)]
 
-    fleet_target = sum(targets.get(m, default_target) for m in target_machines)
-    hourly_target = lambda name: fleet_target if name in by_name else 0   # nothing is targeted outside shifts
+    def active(sd: date, name: str) -> list[str]:
+        return [m for m in target_machines if schedule.is_active(sd, name, m)] if name in by_name else []
+
+    def hourly_target(sd: date, name: str) -> int:   # nothing is targeted outside shifts or in switched-off shifts
+        return sum(targets.get(m, default_target) for m in active(sd, name))
+
+    # Shifts switched off for every machine and without parcels are not reported.
+    shift_totals = defaultdict(int)
+    for (sd, name, _), n in hours.items():
+        shift_totals[(sd, name)] += n["total"]
+    hidden = {k for k in machines if k[1] in by_name and not active(*k) and not shift_totals[k]}
 
     hour_rows = []
     per_shift = defaultdict(zero)
     for (sd, name, h), n in sorted(hours.items(), key=lambda kv: (kv[0][0], sort_hour(by_name.get(kv[0][1]), kv[0][2]))):
+        if (sd, name) in hidden or (name in by_name and not active(sd, name) and not n["total"]):
+            continue   # switched-off shift: only hours that scanned parcels are listed
         s = by_name.get(name)
         m = len(machines[(sd, name)])
-        tgt = hourly_target(name)
+        tgt = hourly_target(sd, name)
         cal = calibration if s and h == s["start"] else 0
         bal = n["total"] - cal
         hour_rows.append(HourRow(date=sd, hour=hour_label(h), shift=display_name(name) if s else OUTSIDE, machines=m,
@@ -102,10 +119,12 @@ def billing_report(counts: Iterable[dict], *, start: date | None, end: date | No
 
     shift_rows = []
     for (sd, name), ms in sorted(machines.items(), key=lambda kv: (kv[0][0], calendar.order.index(kv[0][1]))):
+        if (sd, name) in hidden:
+            continue
         s = by_name.get(name)
         n = per_shift[(sd, name)]
         n_hours = len(shift_hours(s)) if s else 0
-        per_hour = hourly_target(name)
+        per_hour = hourly_target(sd, name)
         tgt = per_hour * n_hours
         cal = calibration if s else 0
         bal = n["total"] - cal
@@ -129,14 +148,21 @@ def day_window(start: date | None, end: date | None, day_start: int) -> tuple[st
 
 
 def day_report(counts: Iterable[dict], *, start: date | None, end: date | None, day_start: int,
-               day_target: Callable[[str], int], target_machines: Iterable[str], total_machines: int) -> DayReport:
+               hour_target: Callable[[str], int], target_machines: Iterable[str], total_machines: int,
+               calendar: ShiftCalendar, schedule: ShiftSchedule = ALWAYS) -> DayReport:
     """Day-wise induction against target.
 
     A day runs from `day_start` o'clock to the same time next day and is named after the date it starts on.
     Every scan in that window counts, including those outside shift hours.
-    Day target = sum of the day targets of `target_machines`, whether they ran or not.
-    Every date in the range is listed; days without scans show zeros.
+    Day target = sum over `target_machines` of the machine's target per hour x the hours of its shifts that are
+    active that day (Shift activation page; the shifts starting on that date), whether it ran or not.
+    Every date in the range is listed; days without scans show zeros. A day with every shift of every machine
+    switched off is left out, unless parcels were scanned: then it shows with target 0.
     """
+    target_machines = list(target_machines)
+
+    def target_of(day: date) -> int:
+        return sum(hour_target(m) * schedule.active_hours(calendar, day, m) for m in target_machines)
     n = defaultdict(lambda: dict.fromkeys(COUNTS, 0))   # day -> counts
     machines = defaultdict(set)                          # day -> machine names
     for r in counts:
@@ -154,10 +180,13 @@ def day_report(counts: Iterable[dict], *, start: date | None, end: date | None, 
     lo, hi = start or min(n, default=None), end or max(n, default=None)
     days = [lo + timedelta(days=i) for i in range((hi - lo).days + 1)] if lo and hi else []
 
-    tgt = sum(day_target(m) for m in target_machines)
     rows = []
     for day in days:
         c = n[day]
+        tgt = target_of(day)
+        if not c["total"] and not any(
+                schedule.is_active(day, s["name"], m) for s in calendar.shifts for m in target_machines):
+            continue   # nothing scheduled and nothing scanned
         begin = datetime.combine(day, time(day_start))
         rows.append(DayRow(date=day, start=begin, end=begin + timedelta(days=1),
                            total_machines=total_machines, machines=len(machines[day]),

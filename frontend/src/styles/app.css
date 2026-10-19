@@ -65,6 +65,9 @@ input, select { user-select: auto !important; -webkit-user-select: auto !importa
 .report.table-hover tbody tr:hover td:first-child { background: #f1f5fb; }
 .report thead th:first-child, .report tfoot td:first-child { z-index: 3; }
 .report tfoot td:first-child { background: #f4f6f9; }
+/* The theme redefines .text-center as display:flex, which stops a table cell from spanning its columns
+   (the "No data" row filled only part of the table). Keep cells as cells. */
+.table td.text-center, .table th.text-center { display: table-cell; }
 
 /* ---- Machine configuration: site rows with their machines nested below */
 .machine-tree .site-row td { background: #f4f6f9; }
@@ -134,8 +137,52 @@ input, select { user-select: auto !important; -webkit-user-select: auto !importa
 .stop-tip-row { display: flex; align-items: center; gap: .45rem; line-height: 1.6; }
 .stop-tip-row strong { color: #0b0b0b; font-variant-numeric: tabular-nums; min-width: 4.2em; }
 .stop-tip-key { width: 12px; height: 3px; border-radius: 2px; }
+.stop-tip-key.stop-tip-key-box { height: 10px; }
 .stop-tip-name { color: #52514e; }
 .stop-tip-total { border-top: 1px solid #eeede8; margin-top: .25rem; padding-top: .25rem; padding-left: calc(12px + .45rem); }
+
+/* ---- Home: the trend charts */
+.legend-line { display: inline-block; width: 16px; height: 3px; border-radius: 2px; }
+
+/* ---- Shift activation: on/off toggles in the weekly grid; state shown by word and colour */
+.schedule-grid tr.schedule-all td { background: #f7f8fa; font-weight: 600; }
+.schedule-toggle { min-width: 52px; border: 0; border-radius: 999px; padding: .2rem .7rem; font-size: .8rem; font-weight: 600;
+                   transition: background .12s, color .12s; }
+.schedule-toggle.is-on { background: #e6f4ea; color: #006300; }
+.schedule-toggle.is-off { background: #fdecea; color: #a51d1d; }
+.schedule-toggle:hover:not(:disabled) { filter: brightness(.95); }
+.schedule-toggle:disabled { opacity: .55; cursor: not-allowed; }
+.schedule-toggle:focus-visible { outline: 2px solid #2a78d6; outline-offset: 1px; }
+.schedule-pill { display: inline-block; border-radius: 999px; padding: .15rem .65rem; font-size: .8rem; font-weight: 600; }
+.schedule-pill.is-on { background: #e6f4ea; color: #006300; }
+.schedule-pill.is-off { background: #fdecea; color: #a51d1d; }
+.schedule-chip { display: inline-flex; align-items: center; border-radius: 999px; padding: .15rem .3rem .15rem .7rem; font-size: .8rem; }
+.schedule-chip.is-on { background: #e6f4ea; }
+.schedule-chip.is-off { background: #fdecea; }
+.schedule-chip .btn-link { color: #212529; font-size: .8rem; }
+
+/* Shift Activation: GitHub-style activity calendar */
+.heat-stats { display: flex; flex-wrap: wrap; gap: .35rem 1.25rem; padding: .25rem 1rem .5rem; font-size: .85rem; color: #52514e; }
+.heat-stats b { color: #0b0b0b; }
+.heat-area { position: relative; }
+.heat-wrap { overflow-x: auto; padding: .25rem 1rem .5rem; }
+.heat-wrap svg { display: block; }
+.heat-day:hover .heat-outline { stroke: #0b0b0b; stroke-width: 1.5; }
+.heat-tip { position: absolute; transform: translate(-50%, calc(-100% + .25rem - 6px)); margin-left: 1rem; pointer-events: none; z-index: 5;
+            background: #1f2328; color: #fff; border-radius: 6px; padding: .35rem .6rem; font-size: .78rem; white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .18); }
+.heat-tip-alert { color: #ffb4ad; font-weight: 600; }
+.heat-tip-muted { color: #c3c2b7; }
+.heat-tip-swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: .35rem; }
+.heat-legend i.heat-legend-dot { width: 7px; height: 7px; border-radius: 50%; background: #fff; border: 1px solid #0b0b0b; }
+/* Home: the two trend charts side by side on wide screens */
+.home-charts { display: grid; grid-template-columns: 1fr; gap: 0 1rem; align-items: start; }
+.home-charts > .card { min-width: 0; }
+@media (min-width: 1200px) { .home-charts { grid-template-columns: 1fr 1fr; } }
+.heat-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .3rem; padding: 0 1rem .75rem;
+               font-size: .78rem; color: #52514e; }
+.heat-legend i { display: inline-block; width: 11px; height: 11px; border-radius: 2px; border: 1px solid rgba(27, 31, 35, .06); }
+.heat-legend i.heat-legend-alert { margin-left: .75rem; background: #fff; border: 1.5px solid #e34948; }
 
 /* ---- Alarm configuration: long alarm names wrap */
 .alarm-config td.name { white-space: normal; min-width: 240px; }
@@ -166,3 +213,11 @@ input, select { user-select: auto !important; -webkit-user-select: auto !importa
   .card-header .card-tools .btn { padding: .2rem .5rem; }
   .content-header h1 { font-size: 1.5rem; }
 }
+
+/* ---- Top header: orange bar (the sidebar's accent) with the app name centred in white */
+.main-header.app-header { background: #f15b40; border-bottom: 0; }
+.app-header .navbar-nav .nav-link { color: rgba(255, 255, 255, .9); }
+.app-header .navbar-nav .nav-link:hover, .app-header .navbar-nav .nav-link:focus { color: #fff; }
+.app-header-title { position: absolute; left: 50%; transform: translateX(-50%); color: #fff; font-size: 1.4rem; font-weight: 700;
+                    letter-spacing: .14em; line-height: 1; }
+.app-header-title:hover, .app-header-title:focus { color: #fff; text-decoration: none; opacity: .9; }

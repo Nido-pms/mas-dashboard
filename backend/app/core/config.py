@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     attendance_collection: str = "attendance_sheets"
     rejection_codes_collection: str = "rejection_codes"
     alarm_config_collection: str = "alarm_config"
+    shift_schedule_collection: str = "shift_schedule"
     dashboard_meta_collection: str = "dashboard_meta"  # small flags, e.g. "standard rejection codes loaded"
     frontend_dist: Path = PROJECT_DIR / "frontend" / "dist"
 

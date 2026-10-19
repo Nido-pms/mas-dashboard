@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field, field_validator
 from app.domain.shifts import MAX_SHIFTS, OUTSIDE, display_name, shift_hours
 
 Target = Annotated[int, Field(ge=0, le=1_000_000)]
-DayTarget = Annotated[int, Field(ge=0, le=100_000_000)]
 Hour = Annotated[int, Field(ge=0, le=23)]
 
 
@@ -52,14 +51,13 @@ class ShiftsUpdate(BaseModel):
 class MachineTarget(BaseModel):
     name: str
     target: Target | None = None          # per hour; None = use the site default
-    day_target: DayTarget | None = None   # per day; None = hourly target x shift hours per day
 
 
 class MachineConfig(BaseModel):
     site: str
     sites: list[str]
     default_target: int
-    shift_hours_per_day: int  # used for day targets that are not set
+    shift_hours_per_day: int  # day target with every shift running = hourly target x these hours
     shifts: list[ShiftInfo]
     machines: list[MachineTarget]
     updated_at: datetime | None

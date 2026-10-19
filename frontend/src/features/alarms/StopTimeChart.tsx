@@ -1,32 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import { bar, dateRange, dayMonth, INK, machineColor, shortNames, useWidth, weekday } from '../../components/charts/kit';
 import { dmy, duration } from '../../utils/format';
 import type { DayMachineStop } from './types';
-
-// Categorical slots in fixed order (validated: CVD and contrast on the white card). A machine's colour comes from its
-// place in the site's full machine list, so it keeps its colour when the Machine filter hides the others.
-const SERIES = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
-const INK = { secondary: '#52514e', muted: '#898781', grid: '#eeede8', axis: '#c3c2b7' };
 
 const HEIGHT = 240;                          // plot area
 const M = { top: 26, right: 16, bottom: 40, left: 52 };
 const BAR_MAX = 24;
 const GAP = 2;
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-/** Every date from start to end ("YYYY-MM-DD"). */
-function dateRange(start: string, end: string): string[] {
-  const out: string[] = [];
-  for (let d = new Date(`${start}T00:00:00Z`); out.length < 400; d.setUTCDate(d.getUTCDate() + 1)) {
-    const s = d.toISOString().slice(0, 10);
-    if (s > end) break;
-    out.push(s);
-  }
-  return out;
-}
-
-const dayMonth = (iso: string) => `${Number(iso.slice(8, 10))} ${MONTHS[Number(iso.slice(5, 7)) - 1]}`;
-const weekday = (iso: string) => WEEKDAYS[new Date(`${iso}T00:00:00Z`).getUTCDay()];
 
 /** Axis ticks in minutes: a clean step giving at most 5 intervals. */
 function ticks(maxMin: number): number[] {
@@ -38,21 +18,6 @@ function ticks(maxMin: number): number[] {
 
 const tickLabel = (min: number) => (min < 60 ? `${min}m` : min % 60 ? `${Math.floor(min / 60)}h ${min % 60}m` : `${min / 60}h`);
 
-/** Column path with a 4px rounded top and a square base. */
-function bar(x: number, y: number, w: number, h: number) {
-  const r = Math.min(4, h, w / 2);
-  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
-}
-
-/** Short names for machines that share a long prefix: "SC_MIS_..._001_002" -> "Machine 002". */
-function shortNames(names: string[]): Map<string, string> {
-  if (names.length < 2) return new Map(names.map((n) => [n, n]));
-  let prefix = names[0];
-  for (const n of names) while (!n.startsWith(prefix)) prefix = prefix.slice(0, -1);
-  const cut = prefix.lastIndexOf('_') + 1;
-  return new Map(names.map((n) => [n, cut > 0 && n.slice(cut) ? `Machine ${n.slice(cut)}` : n]));
-}
-
 interface Props {
   days: DayMachineStop[];
   allMachines: string[];   // every machine of the site, for stable colours
@@ -63,21 +28,12 @@ interface Props {
 
 /** Column chart of the time alarms stopped each machine, per day. */
 export default function StopTimeChart({ days, allMachines, machines, start, end }: Props) {
-  const wrap = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(800);
   const [hover, setHover] = useState<number | null>(null);
   const [table, setTable] = useState(false);
-
-  useEffect(() => {
-    const el = wrap.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => setWidth(Math.max(320, Math.floor(e.contentRect.width))));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [table]);
+  const [wrap, width] = useWidth<HTMLDivElement>([table]);
 
   const known = [...allMachines, ...machines.filter((m) => !allMachines.includes(m))];
-  const color = (m: string) => SERIES[known.indexOf(m) % SERIES.length];
+  const color = (m: string) => machineColor(known, m);
   const short = shortNames(known);
   const label = (m: string) => short.get(m) ?? m;
   const dates = start && end ? dateRange(start, end) : [...new Set(days.map((d) => d.date))].sort();

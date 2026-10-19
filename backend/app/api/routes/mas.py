@@ -10,7 +10,7 @@ from app.core.utils import clean
 from app.domain.shifts import OUTSIDE
 from app.repositories import scans
 from app.schemas.mas import BillingReport, DayReport, FilterOptions
-from app.services import machine_config, mas, rejection_codes
+from app.services import machine_config, mas, rejection_codes, shift_schedule
 
 router = APIRouter(tags=["mas"])
 SiteCollection = Annotated[Collection, Depends(site_collection)]
@@ -44,7 +44,7 @@ def billing(coll: SiteCollection, site: str = DEFAULT_SITE, start_date: date | N
                                  rejection_codes.codes_by_scope(site))
     return mas.billing_report(counts, start=start_date, end=end_date, shift=shift, calendar=t.calendar, targets=t.hourly,
                               default_target=t.default_target, calibration=DEFAULT_CALIBRATION,
-                              **fleet(coll, t, machine))
+                              schedule=shift_schedule.load(site), **fleet(coll, t, machine))
 
 
 @router.get("/day-wise", response_model=DayReport)
@@ -56,5 +56,5 @@ def day_wise(coll: SiteCollection, site: str = DEFAULT_SITE, start_date: date | 
     t = machine_config.targets(site)
     counts = scans.hourly_counts_between(coll, machine, *mas.day_window(start_date, end_date, day_start),
                                          rejection_codes.codes_by_scope(site))
-    return mas.day_report(counts, start=start_date, end=end_date, day_start=day_start, day_target=t.day_target,
-                          **fleet(coll, t, machine))
+    return mas.day_report(counts, start=start_date, end=end_date, day_start=day_start, hour_target=t.hour_target,
+                          schedule=shift_schedule.load(site), calendar=t.calendar, **fleet(coll, t, machine))

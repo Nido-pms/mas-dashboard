@@ -8,7 +8,7 @@ function toggleFullscreen() {
 
 export default function Navbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   return (
-    <nav className="main-header navbar navbar-expand navbar-white navbar-light">
+    <nav className="main-header navbar navbar-expand navbar-dark app-header">
       <ul className="navbar-nav">
         <li className="nav-item">
           <a className="nav-link" href="#" role="button" aria-label="Toggle sidebar"
@@ -16,10 +16,8 @@ export default function Navbar({ onToggleSidebar }: { onToggleSidebar: () => voi
             <i className="fas fa-bars" />
           </a>
         </li>
-        <li className="nav-item d-none d-sm-inline-block">
-          <Link to={HOME} className="nav-link">Home</Link>
-        </li>
       </ul>
+      <Link to={HOME} className="app-header-title" title="Home">MAS</Link>
       <ul className="navbar-nav ml-auto">
         <li className="nav-item">
           <a className="nav-link" href="#" role="button" aria-label="Full screen"

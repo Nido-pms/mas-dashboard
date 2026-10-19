@@ -53,6 +53,25 @@ def hourly_counts_between(coll: Collection, machine: str, ts_from: str | None, t
     return coll.aggregate(pipe, allowDiskUse=True)
 
 
+def rejection_code_counts_between(coll: Collection, machine: str, ts_from: str | None, ts_to: str | None):
+    """Rejected scans per calendar day, hour, machine and rejection code for timestamps in [ts_from, ts_to)."""
+    ts = {"$type": "string"}
+    if ts_from:
+        ts["$gte"] = ts_from
+    if ts_to:
+        ts["$lt"] = ts_to
+    match = {TS: ts, "Package Status": "Rejected"}
+    if machine != "All":
+        match["Machine Name"] = machine
+    pipe = [{"$match": match},
+            {"$group": {"_id": {"d": {"$substrCP": [f"${TS}", 0, 10]},
+                                "h": {"$substrCP": [f"${TS}", 11, 2]},
+                                "m": "$Machine Name",
+                                "c": "$Rejection Code"},
+                        "count": {"$sum": 1}}}]
+    return coll.aggregate(pipe, allowDiskUse=True)
+
+
 SCAN_FIELDS = ("Scanned Barcode", "Machine Name", "Package Status", "Rejection Code", "BagSeal", "Chute ID")
 
 

@@ -101,22 +101,20 @@ def test_day_runs_from_day_start_to_next_day():
               count("2026-10-01", 18, total=20),  # 1 Oct, outside shift hours but still counted
               count("2026-10-02", 6, total=30),   # 1 Oct (before 07:00 next morning)
               count("2026-10-02", 7, total=40)]   # 2 Oct
-    r = day_report(counts, start=date(2026, 10, 1), end=date(2026, 10, 2), day_start=7, day_target=lambda m: 100,
-                   target_machines=["M1"], total_machines=1)
+    r = day_report(counts, start=date(2026, 10, 1), end=date(2026, 10, 2), day_start=7, hour_target=lambda m: 100,
+                   target_machines=["M1"], total_machines=1, calendar=ShiftCalendar())
     assert [(d.date.isoformat(), d.induction) for d in r.days] == [("2026-10-01", 60), ("2026-10-02", 40)]
     assert r.days[0].start.isoformat() == "2026-10-01T07:00:00" and r.days[0].end.isoformat() == "2026-10-02T07:00:00"
     assert r.totals.induction == 100
 
 
-def test_day_target_sums_all_machines():
-    t = SiteTargets(default_target=850, hourly={"M2": 1000}, daily={"M1": 12_000})
-    assert t.day_target("M1") == 12_000
-    assert t.day_target("M2") == 1000 * 17       # no day target: hourly x shift hours per day
-    assert t.day_target("M3") == 850 * 17
+def test_day_target_is_hourly_target_x_shift_hours_for_all_machines():
+    t = SiteTargets(default_target=850, hourly={"M1": 1000})
+    assert (t.hour_target("M1"), t.hour_target("M2")) == (1000, 850)   # no hourly target: site default
     r = day_report([count("2026-10-01", 9, m="M1"), count("2026-10-01", 9, m="M2")],
-                   start=date(2026, 10, 1), end=date(2026, 10, 2), day_start=7, day_target=t.day_target,
-                   target_machines=["M1", "M2", "M3"], total_machines=3)
-    full = 12_000 + 17_000 + 850 * 17            # M3 did not run but still counts
+                   start=date(2026, 10, 1), end=date(2026, 10, 2), day_start=7, hour_target=t.hour_target,
+                   target_machines=["M1", "M2", "M3"], total_machines=3, calendar=t.calendar)
+    full = (1000 + 850 + 850) * 17               # Day 9 h + Night 8 h; M3 did not run but still counts
     assert r.days[0].target == full and r.days[0].machines == 2 and r.days[0].total_machines == 3
     assert r.days[1].target == full and r.days[1].induction == 0   # day with no scans still carries the target
 
@@ -128,8 +126,8 @@ def test_rejections_split_by_code_scope():
     assert (s.rejected, s.rejected_client, s.rejected_nido, s.rejected_undefined) == (14, 10, 3, 1)
     h = report(counts, shift="Day").hour[0]           # 08:00 - 09:00
     assert (h.rejected, h.rejected_client, h.rejected_nido, h.rejected_undefined) == (10, 6, 3, 1)
-    d = day_report(counts, start=date(2026, 10, 6), end=date(2026, 10, 6), day_start=7, day_target=lambda m: 0,
-                   target_machines=["M1"], total_machines=1)
+    d = day_report(counts, start=date(2026, 10, 6), end=date(2026, 10, 6), day_start=7, hour_target=lambda m: 0,
+                   target_machines=["M1"], total_machines=1, calendar=ShiftCalendar())
     assert (d.totals.rejected_client, d.totals.rejected_nido, d.totals.rejected_undefined) == (10, 3, 1)
 
 

@@ -1,4 +1,4 @@
-"""Site settings: shifts and machine targets per hour (with a site default) and per day (defaulting to hourly x shift hours)."""
+"""Site settings: shifts and machine targets per hour (with a site default). Day and shift targets follow from them."""
 from dataclasses import dataclass, field
 
 from pymongo.collection import Collection
@@ -15,16 +15,10 @@ from app.schemas.machine_config import MachineConfig, MachineConfigUpdate, Machi
 class SiteTargets:
     default_target: int = DEFAULT_TARGET
     hourly: dict[str, int] = field(default_factory=dict)
-    daily: dict[str, int] = field(default_factory=dict)
     calendar: ShiftCalendar = field(default_factory=ShiftCalendar)
 
     def hour_target(self, machine: str) -> int:
         return self.hourly.get(machine, self.default_target)
-
-    def day_target(self, machine: str) -> int:
-        if machine in self.daily:
-            return self.daily[machine]
-        return self.hour_target(machine) * self.calendar.hours_per_day()
 
 
 def _parse(doc: dict) -> SiteTargets:
@@ -32,7 +26,6 @@ def _parse(doc: dict) -> SiteTargets:
     return SiteTargets(
         default_target=doc.get("default_target", DEFAULT_TARGET),
         hourly={m["name"]: m["target"] for m in machines if m.get("target") is not None},
-        daily={m["name"]: m["day_target"] for m in machines if m.get("day_target") is not None},
         calendar=ShiftCalendar(doc.get("shifts") or DEFAULT_SHIFTS),
     )
 
@@ -44,7 +37,7 @@ def targets(site: str) -> SiteTargets:
 
 def site_machines(coll: Collection, t: SiteTargets) -> list[str]:
     """Machines available at the site: those seen in scans plus any saved ones that no longer appear."""
-    return sorted({n for n in map(clean, scans.machine_names(coll)) if n} | t.hourly.keys() | t.daily.keys())
+    return sorted({n for n in map(clean, scans.machine_names(coll)) if n} | t.hourly.keys())
 
 
 def get_config(site: str, coll: Collection) -> MachineConfig:
@@ -54,12 +47,12 @@ def get_config(site: str, coll: Collection) -> MachineConfig:
     return MachineConfig(site=site, sites=list(SITES), default_target=t.default_target,
                          shift_hours_per_day=t.calendar.hours_per_day(),
                          shifts=[ShiftInfo(**s, label=shift_label(s), hours=len(shift_hours(s))) for s in t.calendar.shifts],
-                         machines=[MachineTarget(name=n, target=t.hourly.get(n), day_target=t.daily.get(n)) for n in names],
+                         machines=[MachineTarget(name=n, target=t.hourly.get(n)) for n in names],
                          updated_at=doc.get("updated_at"))
 
 
 def save_config(site: str, update: MachineConfigUpdate) -> None:
-    repo.save(site, [m.model_dump() for m in update.machines if m.target is not None or m.day_target is not None],
+    repo.save(site, [m.model_dump() for m in update.machines if m.target is not None],
               default_target=update.default_target)
 
 
